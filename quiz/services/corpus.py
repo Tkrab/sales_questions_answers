@@ -6,7 +6,7 @@ from django.conf import settings
 
 FILES = (
     ("有色行业问答题库_255题.csv", "nonferrous"),
-    ("钢铁行业知识库_问答.csv", "steel"),
+    ("钢铁行业知识库_问答_含难度.csv", "steel"),
 )
 
 LIMITS = {
@@ -85,6 +85,7 @@ def load_steel(path: Path):
             item.update(
                 {
                     "module": _clip(row.get("主题"), "module"),
+                    "difficulty": _clip(row.get("难度"), "difficulty"),
                     "qtype": "问答题",
                     "keywords": _clip(row.get("关键词"), "keywords"),
                     "source": _clip(row.get("来源文件"), "source"),

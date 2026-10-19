@@ -14,7 +14,7 @@
   <div class="gauge level-{{ record.final_score|score_level }}" style="--p: {{ record.final_score }};">
     <div class="gauge-copy">
       <strong>{{ record.final_score|floatformat:"-1" }}</strong>
-      <span>综合得分</span>
+      <span>得分</span>
     </div>
   </div>
   <div>
@@ -24,30 +24,7 @@
     </div>
     <h1>{{ record.question.question }}</h1>
     <p class="meta">{{ record.created_at|date:"Y-m-d H:i" }}{% if record.grader_model %} · {{ record.grader_model }}{% endif %}</p>
-    {% if record.llm_score is None %}
-      <p class="note">综合得分等于相似度得分。{{ record.llm_error }}</p>
-    {% else %}
-      <p class="note">综合得分 = 相似度得分 × {{ sim_weight }}% + 模型评分 × {{ llm_weight }}%。</p>
-    {% endif %}
   </div>
-</section>
-
-<section class="stat-grid">
-  <article>
-    <b>{{ record.similarity_score|floatformat:"-1" }}</b>
-    <span>相似度得分</span>
-    <small>余弦 {{ record.similarity|floatformat:3 }}</small>
-  </article>
-  <article>
-    <b>{% if record.llm_score is None %}—{% else %}{{ record.llm_score|floatformat:"-1" }}{% endif %}</b>
-    <span>模型评分</span>
-    <small>DeepSeek 对照要点</small>
-  </article>
-  <article>
-    <b class="level-text-{{ record.final_score|score_level }}">{{ record.final_score|floatformat:"-1" }}</b>
-    <span>综合得分</span>
-    <small>写入学习记录</small>
-  </article>
 </section>
 
 {% if record.feedback %}

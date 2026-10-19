@@ -6,12 +6,11 @@
   <div>
     <p class="eyebrow">练习</p>
     <h1>选一道题，用自己的话作答。</h1>
-    <p class="lede">标准答案已经做成向量。提交后会计算语义相似度，并生成综合得分。作答前看不到标准答案。</p>
+    <p class="lede">提交后由模型对照标准答案和评分要点打分。作答前看不到标准答案。</p>
   </div>
   <dl class="hero-stats">
     <div><dt>题库</dt><dd>{{ total }}</dd></div>
     <div><dt>我做过</dt><dd>{{ covered }}</dd></div>
-    <div><dt>平均分</dt><dd>{% if average != None %}{{ average|floatformat:"-1" }}{% else %}—{% endif %}</dd></div>
   </dl>
 </section>
 
@@ -25,14 +24,6 @@
       <option value="">全部</option>
       {% for value, label in industries %}
         <option value="{{ value }}" {% if industry == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>模块
-    <select name="module">
-      <option value="">全部</option>
-      {% for item in modules %}
-        <option value="{{ item }}" {% if module == item %}selected{% endif %}>{{ item }}</option>
       {% endfor %}
     </select>
   </label>

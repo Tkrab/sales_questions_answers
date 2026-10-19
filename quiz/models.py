@@ -76,8 +76,8 @@ class AnswerRecord(models.Model):
         verbose_name="题目",
     )
     user_answer = models.TextField("学员答案")
-    similarity = models.FloatField("余弦相似度")
-    similarity_score = models.FloatField("相似度得分")
+    similarity = models.FloatField("余弦相似度", null=True, blank=True)
+    similarity_score = models.FloatField("相似度得分", null=True, blank=True)
     llm_score = models.FloatField("模型得分", null=True, blank=True)
     final_score = models.FloatField("综合得分")
     feedback = models.TextField("评语", blank=True)

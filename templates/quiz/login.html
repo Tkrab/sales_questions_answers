@@ -5,7 +5,7 @@
   <div class="auth-copy">
     <p class="eyebrow">有色 · 钢铁</p>
     <h1>把标准答案记住，再用自己的话讲出来。</h1>
-    <p>提交答案后，系统用同一套中文 BERT 模型比较你和标准答案的语义相似度，再由 DeepSeek 按评分要点写出评语和综合得分。</p>
+    <p>提交答案后，模型对照标准答案和评分要点打分，并写出评语。</p>
   </div>
   <form class="card form" method="post" action="{% url 'login' %}">
     {% csrf_token %}

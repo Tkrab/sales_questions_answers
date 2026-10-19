@@ -8,7 +8,6 @@ from quiz.models import AnswerRecord, Question
 from quiz.services.corpus import load_corpus
 from quiz.services.grader import _parse_grade
 from quiz.templatetags.quiz_extras import score_level
-from quiz.services.scoring import blend_score
 from quiz.services.vectors import cosine
 
 
@@ -36,11 +35,6 @@ class ScoreMathTests(SimpleTestCase):
         self.assertEqual(score_level(79.9), "mid")
         self.assertEqual(score_level(50), "mid")
         self.assertEqual(score_level(49.9), "low")
-
-    def test_blend(self):
-        self.assertEqual(blend_score(80, None), 80.0)
-        self.assertEqual(blend_score(80, 60, 0.4, 0.6), 68.0)
-        self.assertEqual(blend_score(150, 200, 0.5, 0.5), 100.0)
 
     def test_parse_grade_keeps_analysis(self):
         grade = _parse_grade(
@@ -74,6 +68,8 @@ class PageTests(TestCase):
     def test_home_lists_question(self):
         response = self.client.get("/")
         self.assertContains(response, "钢和生铁如何区分")
+        self.assertNotContains(response, "平均分")
+        self.assertNotContains(response, 'name="module"')
 
     def test_question_hides_standard_answer(self):
         response = self.client.get(f"/questions/{self.question.pk}/")

@@ -27,7 +27,7 @@
     <button class="btn" type="submit">提交并评分</button>
     <a class="btn btn-ghost" href="{% url 'home' %}">返回题库</a>
   </div>
-  <p class="hint">评分会用与题库相同的 BERT 模型计算相似度，并请 DeepSeek 按评分要点写评语。标准答案在提交后显示。</p>
+  <p class="hint">提交后由模型对照评分要点打分。标准答案在提交后显示。</p>
 </form>
 
 {% if attempts %}

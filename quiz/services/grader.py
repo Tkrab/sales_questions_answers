@@ -87,9 +87,9 @@ def _parse_grade(text: str) -> LLMGrade:
     )
 
 
-def grade_with_llm(question, user_answer: str, similarity: float) -> LLMGrade:
+def grade_with_llm(question, user_answer: str) -> LLMGrade:
     if not settings.DEEPSEEK_API_KEY:
-        return LLMGrade(error="未配置 DeepSeek API Key，本次只按相似度记分。")
+        return LLMGrade(error="未配置 DeepSeek API Key，这次没有记分。")
 
     points = question.scoring_points.strip() or "（没有单独要点，请对照标准答案）"
     user_prompt = (
@@ -100,7 +100,7 @@ def grade_with_llm(question, user_answer: str, similarity: float) -> LLMGrade:
         f"标准答案：{question.standard_answer}\n\n"
         f"评分要点：{points}\n\n"
         f"学员答案：{user_answer}\n\n"
-        f"向量余弦相似度仅供参考：{similarity:.3f}。分数必须依据要点，不要直接照搬相似度。"
+        "请只根据题目、标准答案和评分要点打分。"
     )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -138,13 +138,13 @@ def grade_with_llm(question, user_answer: str, similarity: float) -> LLMGrade:
                     raise
         text = _message_text(response.choices[0].message)
         if not text:
-            return LLMGrade(error="DeepSeek 没有返回评语，已按相似度记分。")
+            return LLMGrade(error="DeepSeek 没有返回评语，这次没有记分。")
         return _parse_grade(text)
     except Exception as exc:
         logger.exception("DeepSeek 评分失败")
         detail = str(exc)
         if "no provider supported" in detail:
             return LLMGrade(
-                error=f"模型 {settings.DEEPSEEK_MODEL} 当前没有可用服务，已按相似度记分。"
+                error=f"模型 {settings.DEEPSEEK_MODEL} 当前没有可用服务，这次没有记分。"
             )
-        return LLMGrade(error="DeepSeek 评分暂时失败，已按相似度记分。")
+        return LLMGrade(error="DeepSeek 评分暂时失败，这次没有记分。")

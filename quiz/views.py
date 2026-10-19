@@ -1,7 +1,6 @@
 import math
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -285,7 +284,6 @@ def _neighbors(question):
 @require_http_methods(["GET"])
 def home(request):
     industry = request.GET.get("industry", "").strip()
-    module = request.GET.get("module", "").strip()
     difficulty = request.GET.get("difficulty", "").strip()
     keyword = request.GET.get("q", "").strip()
     valid_industries = {key for key, _label in Question.INDUSTRY_CHOICES}
@@ -296,22 +294,14 @@ def home(request):
     else:
         industry = ""
 
-    facet = qs
-    modules = list(
-        facet.exclude(module="").values_list("module", flat=True).distinct().order_by("module")
-    )
     difficulties = list(
-        facet.exclude(difficulty="")
+        qs.exclude(difficulty="")
         .values_list("difficulty", flat=True)
         .distinct()
         .order_by("difficulty")
     )
-    if module not in modules:
-        module = ""
     if difficulty not in difficulties:
         difficulty = ""
-    if module:
-        qs = qs.filter(module=module)
     if difficulty:
         qs = qs.filter(difficulty=difficulty)
     if keyword:
@@ -330,22 +320,18 @@ def home(request):
     page_obj = Paginator(qs, 12).get_page(request.GET.get("page"))
 
     mine = AnswerRecord.objects.filter(user=request.user)
-    agg = mine.aggregate(avg=Avg("final_score"), n=Count("id"))
     return render(
         request,
         "quiz/home.html",
         {
             "page_obj": page_obj,
             "industry": industry,
-            "module": module,
             "difficulty": difficulty,
             "keyword": keyword,
-            "modules": modules,
             "difficulties": difficulties,
             "industries": Question.INDUSTRY_CHOICES,
             "total": Question.objects.filter(active=True).count(),
             "covered": mine.values("question_id").distinct().count(),
-            "average": agg["avg"],
             "pager_suffix": _pager_suffix(request),
         },
     )
@@ -419,8 +405,6 @@ def record_detail(request, pk):
             "record": record,
             "previous": previous,
             "next_question": nxt,
-            "sim_weight": round(settings.SCORE_SIMILARITY_WEIGHT * 100),
-            "llm_weight": round(settings.SCORE_LLM_WEIGHT * 100),
         },
     )
 

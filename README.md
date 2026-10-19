@@ -50,8 +50,6 @@ MONGO_DB_NAME=knowledge_qa
 MONGO_COLLECTION=answer_vectors
 EMBEDDING_MODEL=shibing624/text2vec-base-chinese
 HF_ENDPOINT=https://hf-mirror.com
-SCORE_SIMILARITY_WEIGHT=0.4
-SCORE_LLM_WEIGHT=0.6
 ```
 
 3. 向量模型文件放在 `.models\text2vec-base-chinese`。本机已经下载好，换机器时需要把这个目录一起拷过去。
