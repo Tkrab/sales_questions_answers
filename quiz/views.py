@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta
 
 from django.conf import settings
@@ -22,66 +23,71 @@ INDUSTRY_COLORS = {
 }
 
 
-def _industry_charts(records, labels):
-    covered = list(
-        records.values("question__industry")
-        .annotate(n=Count("question_id", distinct=True))
-        .order_by("-n", "question__industry")
-    )
-    total = sum(row["n"] for row in covered) or 1
-    slices = []
-    start = 0.0
-    for row in covered:
-        industry = row["question__industry"]
-        count = row["n"]
-        share = count / total * 100
-        end = start + share
-        slices.append(
-            {
-                "industry": industry,
-                "label": labels.get(industry, industry),
-                "count": count,
-                "percent": round(share, 1),
-                "color": INDUSTRY_COLORS.get(industry, "#5c6b7a"),
-                "start": round(start, 2),
-                "end": round(end, 2),
-            }
-        )
-        start = end
-    if slices:
-        slices[-1]["end"] = 100
-    gradient = ", ".join(
-        f"{item['color']} {item['start']}% {item['end']}%" for item in slices
-    )
+TREND_GRAINS = (
+    ("day", "按天"),
+    ("week", "按周"),
+    ("month", "按月"),
+)
 
-    ordered = list(records.order_by("created_at"))
-    width, height = 640, 220
-    left, right, top, bottom = 36, 16, 14, 28
+
+def _trend_period(local_dt, grain):
+    day = local_dt.date()
+    if grain == "week":
+        start = day - timedelta(days=day.weekday())
+        return start, start.strftime("%m-%d") + "周"
+    if grain == "month":
+        start = day.replace(day=1)
+        return start, start.strftime("%Y-%m")
+    return day, day.strftime("%m-%d")
+
+
+def _trend_chart(records, labels, grain, title):
+    scores = {}
+    period_text = {}
+    industries = []
+    seen = set()
+    for record in records.order_by("created_at"):
+        local = timezone.localtime(record.created_at)
+        key, text = _trend_period(local, grain)
+        industry = record.question.industry
+        scores.setdefault((key, industry), []).append(float(record.final_score))
+        period_text[key] = text
+        if industry not in seen:
+            seen.add(industry)
+            industries.append(industry)
+    industries.sort(key=lambda item: (item != "nonferrous", item != "steel", item))
+    periods = sorted(period_text)
+
+    width, height = 640, 240
+    left, right, top, bottom = 42, 36, 16, 34
     inner_w = width - left - right
     inner_h = height - top - bottom
-    count = len(ordered)
 
     def x_at(index):
-        if count <= 1:
+        if len(periods) <= 1:
             return left + inner_w / 2
-        return left + inner_w * index / (count - 1)
+        return left + inner_w * index / (len(periods) - 1)
 
     def y_at(score):
         score = max(0.0, min(100.0, float(score)))
         return top + inner_h * (100 - score) / 100
 
-    grouped = {}
-    for index, record in enumerate(ordered):
-        industry = record.question.industry
-        grouped.setdefault(industry, []).append(
-            {
-                "x": round(x_at(index), 1),
-                "y": round(y_at(record.final_score), 1),
-                "score": record.final_score,
-            }
-        )
     series = []
-    for industry, points in grouped.items():
+    for industry in industries:
+        points = []
+        for index, period in enumerate(periods):
+            values = scores.get((period, industry))
+            if not values:
+                continue
+            average = sum(values) / len(values)
+            points.append(
+                {
+                    "x": round(x_at(index), 1),
+                    "y": round(y_at(average), 1),
+                    "score_text": _score_text(average),
+                    "when": period_text[period],
+                }
+            )
         path = " ".join(
             f"{'M' if index == 0 else 'L'}{point['x']},{point['y']}"
             for index, point in enumerate(points)
@@ -95,33 +101,170 @@ def _industry_charts(records, labels):
                 "points": points,
             }
         )
-    series.sort(key=lambda item: 0 if item["industry"] == "nonferrous" else 1)
-    grid = [{"y": round(y_at(value), 1), "label": str(value)} for value in (0, 50, 80, 100)]
+
+    mark_count = len(periods)
+    if mark_count <= 5:
+        mark_indexes = list(range(mark_count))
+    else:
+        mark_indexes = sorted({0, mark_count - 1, *[round(step * (mark_count - 1) / 4) for step in range(1, 4)]})
     x_labels = []
-    if ordered:
-        marks = [0]
-        if count > 2:
-            marks.append(count // 2)
-        if count > 1:
-            marks.append(count - 1)
-        seen = set()
-        for index in marks:
-            if index in seen:
-                continue
-            seen.add(index)
-            when = timezone.localtime(ordered[index].created_at)
-            x_labels.append({"x": round(x_at(index), 1), "text": when.strftime("%m-%d")})
+    for index in mark_indexes:
+        if mark_count > 1 and index == 0:
+            anchor = "start"
+        elif mark_count > 1 and index == mark_count - 1:
+            anchor = "end"
+        else:
+            anchor = "middle"
+        x_labels.append(
+            {
+                "x": round(x_at(index), 1),
+                "text": period_text[periods[index]],
+                "anchor": anchor,
+            }
+        )
     return {
-        "gradient": gradient or "#efe7da 0% 100%",
-        "slices": slices,
+        "grain": grain,
+        "title": title,
         "series": series,
-        "grid": grid,
+        "grid": [{"y": round(y_at(value), 1), "label": str(value)} for value in (0, 25, 50, 75, 100)],
         "x_labels": x_labels,
         "width": width,
         "height": height,
+        "label_y": height - 12,
         "plot_left": left,
         "plot_right": width - right,
     }
+
+
+def _trend_charts(records, labels):
+    return [_trend_chart(records, labels, grain, title) for grain, title in TREND_GRAINS]
+
+
+RADAR_AXES = (
+    (Question.INDUSTRY_NONFERROUS, "有色行业", True),
+    (Question.INDUSTRY_STEEL, "钢铁行业", True),
+    ("xx-1", "xx行业", False),
+    ("xx-2", "xx行业", False),
+    ("xx-3", "xx行业", False),
+)
+MASTERY_HIGH = 80
+
+
+def _score_text(value) -> str:
+    if value is None:
+        return "暂无"
+    number = round(float(value), 1)
+    if number == int(number):
+        return str(int(number))
+    return f"{number:.1f}"
+
+
+def _radar_chart(records):
+    now = timezone.now()
+    this_start = now - timedelta(days=7)
+    last_start = now - timedelta(days=14)
+    count = len(RADAR_AXES)
+    cx, cy, radius = 220, 168, 102
+    label_radius = 138
+
+    def average_between(industry, start, end):
+        matched = records.filter(question__industry=industry, created_at__gte=start)
+        if end is not None:
+            matched = matched.filter(created_at__lt=end)
+        return matched.aggregate(avg=Avg("final_score"))["avg"]
+
+    def point_at(index, score):
+        angle = -math.pi / 2 + index * 2 * math.pi / count
+        distance = radius * max(0.0, min(100.0, float(score or 0))) / 100
+        return (
+            round(cx + distance * math.cos(angle), 1),
+            round(cy + distance * math.sin(angle), 1),
+        )
+
+    axes = []
+    high = []
+    low = []
+    for index, (key, label, real) in enumerate(RADAR_AXES):
+        this_avg = last_avg = overall = None
+        if real:
+            this_avg = average_between(key, this_start, None)
+            last_avg = average_between(key, last_start, this_start)
+            overall = records.filter(question__industry=key).aggregate(avg=Avg("final_score"))["avg"]
+            current = next(
+                (value for value in (this_avg, last_avg, overall) if value is not None),
+                None,
+            )
+            if current is not None:
+                (high if current >= MASTERY_HIGH else low).append(label)
+        angle = -math.pi / 2 + index * 2 * math.pi / count
+        cosine = math.cos(angle)
+        if cosine > 0.35:
+            anchor = "start"
+        elif cosine < -0.35:
+            anchor = "end"
+        else:
+            anchor = "middle"
+        axes.append(
+            {
+                "label": label,
+                "this_week": this_avg,
+                "last_week": last_avg,
+                "this_text": _score_text(this_avg),
+                "last_text": _score_text(last_avg),
+                "this_point": point_at(index, this_avg),
+                "last_point": point_at(index, last_avg),
+                "label_x": round(cx + label_radius * cosine, 1),
+                "label_y": round(cy + label_radius * math.sin(angle), 1),
+                "anchor": anchor,
+            }
+        )
+
+    def pack(attr):
+        return " ".join(f"{axis[attr][0]},{axis[attr][1]}" for axis in axes)
+
+    return {
+        "cx": cx,
+        "cy": cy,
+        "rings": [radius * step / 4 for step in (1, 2, 3, 4)],
+        "spoke_ends": [
+            {"x": point_at(index, 100)[0], "y": point_at(index, 100)[1]}
+            for index in range(count)
+        ],
+        "this_points": pack("this_point"),
+        "last_points": pack("last_point"),
+        "axes": axes,
+        "high": high,
+        "low": low,
+    }
+
+
+def _history_page(records, page_number):
+    grouped = {}
+    order = []
+    for record in records.order_by("-created_at"):
+        key = record.question_id
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(record)
+    groups = []
+    for key in order:
+        attempts = grouped[key]
+        latest = attempts[0]
+        groups.append(
+            {
+                "question": latest.question,
+                "attempts": attempts,
+                "day": timezone.localtime(latest.created_at).strftime("%Y-%m-%d"),
+            }
+        )
+    page_obj = Paginator(groups, 8).get_page(page_number)
+    history_days = []
+    for item in page_obj.object_list:
+        if not history_days or history_days[-1]["day"] != item["day"]:
+            history_days.append({"day": item["day"], "items": []})
+        history_days[-1]["items"].append(item)
+    return page_obj, history_days
 
 
 def _pager_suffix(request) -> str:
@@ -333,13 +476,7 @@ def profile(request):
             }
         )
     week_ago = timezone.now() - timedelta(days=7)
-    page_obj = Paginator(records, 10).get_page(request.GET.get("page"))
-    history_days = []
-    for record in page_obj.object_list:
-        day = timezone.localtime(record.created_at).strftime("%Y-%m-%d")
-        if not history_days or history_days[-1]["day"] != day:
-            history_days.append({"day": day, "items": []})
-        history_days[-1]["items"].append(record)
+    page_obj, history_days = _history_page(records, request.GET.get("page"))
     return render(
         request,
         "quiz/profile.html",
@@ -351,7 +488,8 @@ def profile(request):
             "mid_count": records.filter(final_score__gte=50, final_score__lt=80).count(),
             "low_count": records.filter(final_score__lt=50).count(),
             "industry_rows": industry_rows,
-            "industry_chart": _industry_charts(records, labels),
+            "trend_charts": _trend_charts(records, labels),
+            "radar": _radar_chart(records),
             "module_rows": module_rows,
             "page_obj": page_obj,
             "history_days": history_days,

@@ -13,47 +13,93 @@
 {% if attempt_count %}
   <section class="chart-grid">
     <article class="card">
-      <h2>行业占比</h2>
-      <p class="meta">按做过的题目数量计算，共 {{ covered }} 题。</p>
-      <div class="pie-layout">
-        <div class="pie" style="background: conic-gradient({{ industry_chart.gradient }});" role="img" aria-label="行业题目占比"></div>
-        <ul class="pie-legend">
-          {% for item in industry_chart.slices %}
-            <li>
-              <i style="background: {{ item.color }}"></i>
-              <span>{{ item.label }}</span>
-              <b>{{ item.percent|floatformat:"-1" }}%</b>
-              <small>{{ item.count }} 题</small>
-            </li>
-          {% endfor %}
-        </ul>
+      <h2>行业掌握</h2>
+      <p class="meta">五个维度。本周均分和上周均分各一圈，80 分及以上算掌握程度高。</p>
+      <svg class="radar" viewBox="0 0 440 340" role="img" aria-label="五个行业的本周均分和上周均分">
+        {% for ring in radar.rings %}
+          <circle class="grid" cx="{{ radar.cx }}" cy="{{ radar.cy }}" r="{{ ring }}"></circle>
+        {% endfor %}
+        {% for spoke in radar.spoke_ends %}
+          <line x1="{{ radar.cx }}" y1="{{ radar.cy }}" x2="{{ spoke.x }}" y2="{{ spoke.y }}"></line>
+        {% endfor %}
+        <polygon class="ring-last" points="{{ radar.last_points }}"></polygon>
+        <polygon class="ring-this" points="{{ radar.this_points }}"></polygon>
+        {% for axis in radar.axes %}
+          <circle class="dot-last" cx="{{ axis.last_point.0 }}" cy="{{ axis.last_point.1 }}" r="4.5">
+            <title>上周均分 {{ axis.label }} {{ axis.last_text }}</title>
+          </circle>
+        {% endfor %}
+        {% for axis in radar.axes %}
+          <circle class="dot-this" cx="{{ axis.this_point.0 }}" cy="{{ axis.this_point.1 }}" r="4.5">
+            <title>本周均分 {{ axis.label }} {{ axis.this_text }}</title>
+          </circle>
+        {% endfor %}
+        {% for axis in radar.axes %}
+          <text x="{{ axis.label_x }}" y="{{ axis.label_y }}" text-anchor="{{ axis.anchor }}" dominant-baseline="middle">{{ axis.label }}</text>
+        {% endfor %}
+      </svg>
+      <ul class="pie-legend chart-legend radar-legend">
+        <li><i class="swatch-this"></i><span>本周均分</span></li>
+        <li><i class="swatch-last"></i><span>上周均分</span></li>
+      </ul>
+      <div class="mastery">
+        <div class="mastery-row is-high">
+          <span class="mastery-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.8l2.4 5.7 6.2.6-4.7 4 1.4 6.1L12 16.6 6.7 19.2l1.4-6.1-4.7-4 6.2-.6L12 2.8z"/></svg>
+            掌握程度高
+          </span>
+          <p>{% if radar.high %}{{ radar.high|join:"、" }}{% else %}暂无{% endif %}</p>
+        </div>
+        <div class="mastery-row is-low">
+          <span class="mastery-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 8h10a4 4 0 010 8H8"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 12l-4 4 4 4"/></svg>
+            掌握程度低
+          </span>
+          <p>{% if radar.low %}{{ radar.low|join:"、" }}{% else %}暂无{% endif %}</p>
+        </div>
       </div>
     </article>
     <article class="card">
       <h2>成绩走势</h2>
-      <p class="meta">每条线是一个行业的历次综合得分，横轴按作答时间。</p>
-      <svg class="line-chart" viewBox="0 0 {{ industry_chart.width }} {{ industry_chart.height }}" role="img" aria-label="各行业历次得分">
-        {% for line in industry_chart.grid %}
-          <line x1="{{ industry_chart.plot_left }}" y1="{{ line.y }}" x2="{{ industry_chart.plot_right }}" y2="{{ line.y }}"></line>
-          <text x="2" y="{{ line.y }}" dominant-baseline="middle">{{ line.label }}</text>
+      <p class="meta">横轴是日期，纵轴是该行业在这一天、这一周或这一月的平均分。</p>
+      <div class="trend">
+        {% for chart in trend_charts %}
+          <input class="trend-input" type="radio" name="trend-grain" id="trend-{{ chart.grain }}" {% if forloop.first %}checked{% endif %}>
         {% endfor %}
-        {% for item in industry_chart.series %}
-          <path d="{{ item.path }}" stroke="{{ item.color }}"></path>
-          {% for point in item.points %}
-            <circle cx="{{ point.x }}" cy="{{ point.y }}" r="4.5" fill="{{ item.color }}">
-              <title>{{ item.label }} {{ point.score }}</title>
-            </circle>
+        <div class="trend-tabs" role="tablist">
+          {% for chart in trend_charts %}
+            <label for="trend-{{ chart.grain }}">{{ chart.title }}</label>
           {% endfor %}
+        </div>
+        {% for chart in trend_charts %}
+          <div class="trend-panel is-{{ chart.grain }}">
+            <svg class="line-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="按{{ chart.title }}的行业均分">
+              {% for line in chart.grid %}
+                <line x1="{{ chart.plot_left }}" y1="{{ line.y }}" x2="{{ chart.plot_right }}" y2="{{ line.y }}"></line>
+                <text x="4" y="{{ line.y }}" dominant-baseline="middle">{{ line.label }}</text>
+              {% endfor %}
+              {% for item in chart.series %}
+                {% if item.path %}
+                  <path d="{{ item.path }}" stroke="{{ item.color }}"></path>
+                {% endif %}
+                {% for point in item.points %}
+                  <circle cx="{{ point.x }}" cy="{{ point.y }}" r="4.5" fill="{{ item.color }}">
+                    <title>{{ item.label }} {{ point.when }} 均分 {{ point.score_text }}</title>
+                  </circle>
+                {% endfor %}
+              {% endfor %}
+              {% for label in chart.x_labels %}
+                <text class="axis-x" x="{{ label.x }}" y="{{ chart.label_y }}" text-anchor="{{ label.anchor }}">{{ label.text }}</text>
+              {% endfor %}
+            </svg>
+          </div>
         {% endfor %}
-        {% for label in industry_chart.x_labels %}
-          <text class="axis-x" x="{{ label.x }}" y="214" text-anchor="middle">{{ label.text }}</text>
-        {% endfor %}
-      </svg>
-      <ul class="pie-legend chart-legend">
-        {% for item in industry_chart.series %}
-          <li><i style="background: {{ item.color }}"></i><span>{{ item.label }}</span></li>
-        {% endfor %}
-      </ul>
+        <ul class="pie-legend chart-legend">
+          {% for item in trend_charts.0.series %}
+            <li><i style="background: {{ item.color }}"></i><span>{{ item.label }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
     </article>
   </section>
 
@@ -98,18 +144,23 @@
       <h3 class="day-label">{{ group.day }}</h3>
       <div class="attempt-rows">
         {% for item in group.items %}
-          <a class="attempt-row level-{{ item.final_score|score_level }}" href="{% url 'record' item.pk %}">
-            <span class="attempt-score">{{ item.final_score|floatformat:"-1" }}</span>
-            <span class="attempt-main">
-              <span class="attempt-q">{{ item.question.question }}</span>
-              <span class="score-lane" aria-hidden="true"><span style="width: {{ item.final_score }}%"></span></span>
-              <span class="attempt-meta">
-                <span class="badge industry-{{ item.question.industry }}">{{ item.question.get_industry_display }}</span>
-                <span class="code">{{ item.question.code }}</span>
-                <span>{{ item.created_at|date:"H:i" }}</span>
-              </span>
-            </span>
-          </a>
+          <article class="attempt-group">
+            <p class="attempt-q">{{ item.question.question }}</p>
+            <p class="attempt-meta">
+              <span class="badge industry-{{ item.question.industry }}">{{ item.question.get_industry_display }}</span>
+              <span class="code">{{ item.question.code }}</span>
+              <span>{{ item.attempts|length }} 次</span>
+            </p>
+            <div class="attempt-lines">
+              {% for record in item.attempts %}
+                <a class="attempt-line level-{{ record.final_score|score_level }}" href="{% url 'record' record.pk %}">
+                  <span class="attempt-score">{{ record.final_score|floatformat:"-1" }}</span>
+                  <span class="score-lane" aria-hidden="true"><span style="width: {{ record.final_score }}%"></span></span>
+                  <span class="attempt-time">{{ record.created_at|date:"H:i" }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          </article>
         {% endfor %}
       </div>
     {% endfor %}
