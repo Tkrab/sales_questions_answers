@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load quiz_extras %}
+{% block title %}得分 {{ record.final_score|floatformat:"-1" }} · {{ record.question.code }}{% endblock %}
+{% block content %}
+<p class="crumb">
+  <a href="{% url 'home' %}">题库</a>
+  <span>/</span>
+  <a href="{% url 'question' record.question.pk %}">{{ record.question.code }}</a>
+  <span>/</span>
+  评分
+</p>
+
+<section class="score-hero card">
+  <div class="gauge level-{{ record.final_score|score_level }}" style="--p: {{ record.final_score }};">
+    <div class="gauge-copy">
+      <strong>{{ record.final_score|floatformat:"-1" }}</strong>
+      <span>综合得分</span>
+    </div>
+  </div>
+  <div>
+    <div class="q-card-top">
+      <span class="badge industry-{{ record.question.industry }}">{{ record.question.get_industry_display }}</span>
+      <span class="code">{{ record.question.code }}</span>
+    </div>
+    <h1>{{ record.question.question }}</h1>
+    <p class="meta">{{ record.created_at|date:"Y-m-d H:i" }}{% if record.grader_model %} · {{ record.grader_model }}{% endif %}</p>
+    {% if record.llm_score is None %}
+      <p class="note">综合得分等于相似度得分。{{ record.llm_error }}</p>
+    {% else %}
+      <p class="note">综合得分 = 相似度得分 × {{ sim_weight }}% + 模型评分 × {{ llm_weight }}%。</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="stat-grid">
+  <article>
+    <b>{{ record.similarity_score|floatformat:"-1" }}</b>
+    <span>相似度得分</span>
+    <small>余弦 {{ record.similarity|floatformat:3 }}</small>
+  </article>
+  <article>
+    <b>{% if record.llm_score is None %}—{% else %}{{ record.llm_score|floatformat:"-1" }}{% endif %}</b>
+    <span>模型评分</span>
+    <small>DeepSeek 对照要点</small>
+  </article>
+  <article>
+    <b class="level-text-{{ record.final_score|score_level }}">{{ record.final_score|floatformat:"-1" }}</b>
+    <span>综合得分</span>
+    <small>写入学习记录</small>
+  </article>
+</section>
+
+{% if record.feedback %}
+  <section class="card">
+    <h2>评语</h2>
+    <p class="prose">{{ record.feedback }}</p>
+  </section>
+{% endif %}
+
+{% if record.hit_points or record.missed_points %}
+  <section class="split">
+    {% if record.hit_points %}
+      <article class="card">
+        <h2>覆盖到的要点</h2>
+        <div class="tags">
+          {% for point in record.hit_points %}<span class="tag hit">{{ point }}</span>{% endfor %}
+        </div>
+      </article>
+    {% endif %}
+    {% if record.missed_points %}
+      <article class="card">
+        <h2>还可以补上</h2>
+        <div class="tags">
+          {% for point in record.missed_points %}<span class="tag miss">{{ point }}</span>{% endfor %}
+        </div>
+      </article>
+    {% endif %}
+  </section>
+{% endif %}
+
+<section class="compare">
+  <article class="card">
+    <h2>你的答案</h2>
+    <p class="prose">{{ record.user_answer }}</p>
+  </article>
+  <article class="card">
+    <h2>标准答案</h2>
+    <p class="prose">{{ record.question.standard_answer }}</p>
+    {% if record.question.scoring_points %}
+      <h3>评分要点</h3>
+      <p class="prose">{{ record.question.scoring_points }}</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="card">
+  <h2>DeepSeek 分析</h2>
+  <p class="meta">对照你的答案和评分要点{% if record.grader_model %} · {{ record.grader_model }}{% endif %}</p>
+  {% if record.analysis %}
+    <p class="prose">{{ record.analysis }}</p>
+  {% else %}
+    <p class="note">{{ record.llm_error|default:"这次没有生成分析。" }}</p>
+  {% endif %}
+</section>
+
+{% if record.question.source or record.question.notes %}
+  <p class="source-line">
+    {% if record.question.source %}来源：{{ record.question.source }}{% endif %}
+    {% for key, value in record.question.notes.items %}
+      {% if value %} · {{ key }}：{{ value }}{% endif %}
+    {% endfor %}
+  </p>
+{% endif %}
+
+<div class="actions">
+  <a class="btn" href="{% url 'question' record.question.pk %}">再答一次</a>
+  {% if next_question %}
+    <a class="btn btn-ghost" href="{% url 'question' next_question.pk %}">下一题</a>
+  {% endif %}
+  <a class="btn btn-ghost" href="{% url 'profile' %}">查看学习记录</a>
+</div>
+{% endblock %}

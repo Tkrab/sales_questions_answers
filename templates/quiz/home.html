@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load quiz_extras %}
+{% block title %}题库 · 行业知识问答{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">练习</p>
+    <h1>选一道题，用自己的话作答。</h1>
+    <p class="lede">标准答案已经做成向量。提交后会计算语义相似度，并生成综合得分。作答前看不到标准答案。</p>
+  </div>
+  <dl class="hero-stats">
+    <div><dt>题库</dt><dd>{{ total }}</dd></div>
+    <div><dt>我做过</dt><dd>{{ covered }}</dd></div>
+    <div><dt>平均分</dt><dd>{% if average != None %}{{ average|floatformat:"-1" }}{% else %}—{% endif %}</dd></div>
+  </dl>
+</section>
+
+{% if total == 0 %}
+  <p class="callout">题库还是空的。请先在项目目录执行 <code>python manage.py ingest_knowledge</code>。</p>
+{% endif %}
+
+<form class="filters" method="get">
+  <label>行业
+    <select name="industry">
+      <option value="">全部</option>
+      {% for value, label in industries %}
+        <option value="{{ value }}" {% if industry == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>模块
+    <select name="module">
+      <option value="">全部</option>
+      {% for item in modules %}
+        <option value="{{ item }}" {% if module == item %}selected{% endif %}>{{ item }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>难度
+    <select name="difficulty">
+      <option value="">全部</option>
+      {% for item in difficulties %}
+        <option value="{{ item }}" {% if difficulty == item %}selected{% endif %}>{{ item }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="grow">搜索
+    <input type="search" name="q" value="{{ keyword }}" placeholder="题目、题号或关键词">
+  </label>
+  <button class="btn" type="submit">筛选</button>
+</form>
+
+<p class="result-count">筛选结果 {{ page_obj.paginator.count }} 题</p>
+
+<div class="q-list">
+  {% for question in page_obj %}
+    <a class="q-card" href="{% url 'question' question.pk %}">
+      <div class="q-card-top">
+        <span class="badge industry-{{ question.industry }}">{{ question.get_industry_display }}</span>
+        <span class="code">{{ question.code }}</span>
+        {% if question.difficulty %}<span class="badge diff">{{ question.difficulty }}</span>{% endif %}
+        {% if question.best_score is not None %}
+          <span class="score-pill level-{{ question.best_score|score_level }}">最高 {{ question.best_score|floatformat:"-1" }}</span>
+        {% else %}
+          <span class="score-pill level-na">未作答</span>
+        {% endif %}
+      </div>
+      <p>{{ question.question }}</p>
+      <span class="meta">{{ question.module }}{% if question.scene %} · {{ question.scene }}{% endif %}</span>
+    </a>
+  {% empty %}
+    <p class="empty">没有符合条件的题目。</p>
+  {% endfor %}
+</div>
+{% include "quiz/_pager.html" %}
+{% endblock %}

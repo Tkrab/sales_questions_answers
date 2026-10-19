@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}注册 · 行业知识问答{% endblock %}
+{% block content %}
+<section class="auth">
+  <div class="auth-copy">
+    <p class="eyebrow">学习档案</p>
+    <h1>注册之后，每次作答都会留在你的学习记录里。</h1>
+    <p>姓名和部门只保存在本机 SQLite 中，用来在个人页区分学习历史。</p>
+  </div>
+  <form class="card form" method="post">
+    {% csrf_token %}
+    <h2>注册</h2>
+    {% include "quiz/_fields.html" %}
+    <button class="btn" type="submit">创建账号</button>
+    <p class="switch">已有账号？<a href="{% url 'login' %}">登录</a></p>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}行业知识问答{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}">
+      <span class="brand-mark">问</span>
+      <span>
+        <strong>行业知识问答</strong>
+        <small>有色 · 钢铁</small>
+      </span>
+    </a>
+    {% if request.user.is_authenticated %}
+      <nav>
+        <a href="{% url 'home' %}">题库</a>
+        <a href="{% url 'profile' %}">我的学习</a>
+      </nav>
+      <div class="who">
+        <a class="who-name" href="{% url 'account' %}">{{ profile_name }}</a>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit">退出</button>
+        </form>
+      </div>
+    {% endif %}
+  </header>
+  <main class="page">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="message {{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

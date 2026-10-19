@@ -1,0 +1,15 @@
+.env
+db.sqlite3
+__pycache__/
+*.py[cod]
+.tools/
+.mongo-data/
+.models/
+staticfiles/
+.venv/
+venv/
+.idea/
+tmp/
+output/
+*.zip
+*.mdmp

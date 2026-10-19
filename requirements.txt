@@ -1,0 +1,6 @@
+Django>=5.1,<6
+pymongo>=4.10
+openai>=1.40
+sentence-transformers>=3.0
+numpy>=1.26
+# 向量模型通过本机已安装的 PyTorch 运行

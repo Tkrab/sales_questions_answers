@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load quiz_extras %}
+{% block title %}{{ question.code }} · 行业知识问答{% endblock %}
+{% block content %}
+<p class="crumb">
+  <a href="{% url 'home' %}">题库</a>
+  <span>/</span>
+  {{ question.get_industry_display }}
+  <span>/</span>
+  {{ question.code }}
+</p>
+<article class="card question-head">
+  <div class="q-card-top">
+    <span class="badge industry-{{ question.industry }}">{{ question.get_industry_display }}</span>
+    <span class="code">{{ question.code }}</span>
+    {% if question.difficulty %}<span class="badge diff">{{ question.difficulty }}</span>{% endif %}
+    {% if question.qtype %}<span class="badge diff">{{ question.qtype }}</span>{% endif %}
+  </div>
+  <h1>{{ question.question }}</h1>
+  <p class="meta">{{ question.module }}{% if question.scene %} · {{ question.scene }}{% endif %}{% if question.keywords %} · {{ question.keywords }}{% endif %}</p>
+</article>
+
+<form class="card form answer-form" method="post">
+  {% csrf_token %}
+  {% include "quiz/_fields.html" %}
+  <div class="actions">
+    <button class="btn" type="submit">提交并评分</button>
+    <a class="btn btn-ghost" href="{% url 'home' %}">返回题库</a>
+  </div>
+  <p class="hint">评分会用与题库相同的 BERT 模型计算相似度，并请 DeepSeek 按评分要点写评语。标准答案在提交后显示。</p>
+</form>
+
+{% if attempts %}
+  <section class="card">
+    <h2>最近作答</h2>
+    <ul class="attempt-list">
+      {% for item in attempts %}
+        <li>
+          <a href="{% url 'record' item.pk %}">{{ item.created_at|date:"Y-m-d H:i" }} · {{ item.final_score|floatformat:"-1" }} 分</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+<nav class="neighbors">
+  {% if previous %}
+    <a href="{% url 'question' previous.pk %}">上一题 · {{ previous.code }}</a>
+  {% else %}
+    <span></span>
+  {% endif %}
+  {% if next_question %}
+    <a href="{% url 'question' next_question.pk %}">下一题 · {{ next_question.code }}</a>
+  {% endif %}
+</nav>
+<script>
+  const answerForm = document.querySelector(".answer-form");
+  if (answerForm) {
+    answerForm.addEventListener("submit", () => {
+      const button = answerForm.querySelector("button[type=submit]");
+      if (!button) return;
+      button.disabled = true;
+      button.textContent = "正在评分…";
+    });
+  }
+</script>
+{% endblock %}
