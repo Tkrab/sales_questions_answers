@@ -7,38 +7,59 @@
   <title>{% block title %}行业知识问答{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="{% url 'home' %}">
-      <span class="brand-mark">问</span>
-      <span>
-        <strong>行业知识问答</strong>
-        <small>有色 · 钢铁</small>
-      </span>
-    </a>
-    {% if request.user.is_authenticated %}
+<body class="{% if request.user.is_authenticated %}has-sidenav{% else %}auth-body{% endif %}">
+  {% if request.user.is_authenticated %}
+    <aside class="sidenav">
+      <a class="brand" href="{% url 'home' %}">
+        <span class="brand-mark">问</span>
+        <span>
+          <strong>行业知识问答</strong>
+          <small>有色 · 钢铁</small>
+        </span>
+      </a>
+      <p class="sidenav-label">练习</p>
       <nav>
-        <a href="{% url 'home' %}">题库</a>
-        <a href="{% url 'profile' %}">我的学习</a>
+        <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'question' %}class="active"{% endif %}>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3V4zm3 4h7V6H8v2zm0 4h7v-2H8v2z"/></svg>
+          </span>
+          题库
+        </a>
+        <a href="{% url 'profile' %}" {% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'record' %}class="active"{% endif %}>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M4 19V5h2v14h14v2H4zm4-3h2v-4H8v4zm4 0h2V8h-2v8zm4 0h2v-6h-2v6z"/></svg>
+          </span>
+          我的学习
+        </a>
       </nav>
-      <div class="who">
-        <a class="who-name" href="{% url 'account' %}">{{ profile_name }}</a>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}
-          <button type="submit">退出</button>
-        </form>
-      </div>
-    {% endif %}
-  </header>
-  <main class="page">
-    {% if messages %}
-      <ul class="messages">
-        {% for message in messages %}
-          <li class="message {{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% block content %}{% endblock %}
-  </main>
+    </aside>
+    <div class="shell">
+      <header class="navbar">
+        <div>
+          <p class="navbar-kicker">行业知识问答</p>
+          <strong>{% block navbar_title %}练习台{% endblock %}</strong>
+        </div>
+        <div class="who">
+          <a class="who-name{% if request.resolver_match.url_name == 'account' %} is-current{% endif %}" href="{% url 'account' %}">个人中心</a>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit">退出</button>
+          </form>
+        </div>
+      </header>
+  {% endif %}
+      <main class="page">
+        {% if messages %}
+          <ul class="messages">
+            {% for message in messages %}
+              <li class="message {{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+  {% if request.user.is_authenticated %}
+    </div>
+  {% endif %}
 </body>
 </html>

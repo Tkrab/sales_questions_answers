@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load quiz_extras %}
 {% block title %}{{ question.code }} · 行业知识问答{% endblock %}
+{% block navbar_title %}作答{% endblock %}
 {% block content %}
 <p class="crumb">
   <a href="{% url 'home' %}">题库</a>

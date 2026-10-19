@@ -1,32 +1,30 @@
 # 行业知识问答
 
-有色行业和钢铁行业的知识练习系统。打开浏览器访问 http://127.0.0.1:8000 。
-
-当前 MongoDB 和 Django 都已停止。按下面的顺序重新启动。
+有色行业和钢铁行业的知识练习系统。学员选择题目作答后，由模型对照标准答案和评分要点打分，并可以在学习中心查看自己的记录。
 
 ## 启动
 
-在项目目录 `D:\schneider\知识问答` 打开两个 PowerShell 窗口。
+本地部署时需要先启动 MongoDB，网页服务依赖它读取题库向量。
 
-第一个窗口启动 MongoDB，这个窗口要一直开着：
+在项目目录打开两个终端。
+
+第一个终端启动 MongoDB，这个窗口要一直开着：
 
 ```powershell
-cd D:\schneider\知识问答
 .\start_mongo.ps1
 ```
 
-看到日志里出现 `Waiting for connections` 后，在第二个窗口启动网页：
+看到日志里出现 `Waiting for connections` 后，在第二个终端启动网页：
 
 ```powershell
-cd D:\schneider\知识问答
-python manage.py runserver 127.0.0.1:8000
+python manage.py runserver
 ```
 
-浏览器打开 http://127.0.0.1:8000 。题库和向量已经导入过，日常启动不用再跑导入命令。
+题库和向量已经导入过时，日常启动不用再跑导入命令。
 
 ## 停止
 
-在两个窗口里分别按 `Ctrl+C`。先停 Django，再停 MongoDB。
+在两个终端里分别按 `Ctrl+C`。先停 Django，再停 MongoDB。
 
 ## 第一次准备
 
